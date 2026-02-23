@@ -29,14 +29,17 @@ export function useWallet() {
   const [error, setError] = useState("");
 
   const connect = useCallback(async (isAuto = false) => {
-    if (typeof window === "undefined" || !window.ethereum) {
-      if (!isAuto) setError("MetaMask not found. Please install MetaMask.");
-      return false;
-    }
-    
-    if (!isAuto) setConnecting(true);
-    setError("");
     try {
+      if (typeof window === "undefined") return false;
+      
+      if (!window.ethereum) {
+        if (!isAuto) setError("MetaMask not installed. Please install MetaMask extension.");
+        return false;
+      }
+    
+      if (!isAuto) setConnecting(true);
+      setError("");
+      
       const provider = new ethers.BrowserProvider(window.ethereum);
       
       // If auto-connecting, check if we already have permission
@@ -117,12 +120,13 @@ export function useWallet() {
 
   // Handle account/network changes
   useEffect(() => {
-    const ethereum = typeof window !== "undefined" ? (window as any).ethereum : null;
+    if (typeof window === "undefined") return;
+    
+    const ethereum = window.ethereum;
     if (!ethereum) return;
 
-    const handleAccountsChanged = (accounts: any) => {
-      const accts = accounts as string[];
-      if (accts.length === 0) {
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
         disconnect();
       } else {
         connect(true); 
