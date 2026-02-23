@@ -69,7 +69,16 @@ export function useWallet() {
       return true;
     } catch (e: unknown) {
       if (!isAuto) {
-        const msg = e instanceof Error ? e.message : "Connection failed";
+        let msg = "Connection failed";
+        if (e instanceof Error) {
+          if (e.message.includes("user rejected")) {
+            msg = "Connection rejected by user";
+          } else if (e.message.includes("already pending")) {
+            msg = "Connection request already pending";
+          } else {
+            msg = e.message;
+          }
+        }
         setError(msg);
       }
       return false;

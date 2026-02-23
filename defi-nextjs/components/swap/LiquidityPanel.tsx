@@ -68,6 +68,16 @@ export function LiquidityPanel({
     if (!swapContract || !tokenAContract || !tokenBContract || !numA || !numB) return;
     setLoading(true);
     try {
+      if (numA > user.balanceA) {
+        throw new Error(`Insufficient ${symbolA} balance`);
+      }
+      if (numB > user.balanceB) {
+        throw new Error(`Insufficient ${symbolB} balance`);
+      }
+      if (numA <= 0 || numB <= 0) {
+        throw new Error("Amounts must be greater than 0");
+      }
+
       const waA = toWei(amtA);
       const waB = toWei(amtB);
       const swapAddr = swapContract.target;
@@ -91,12 +101,23 @@ export function LiquidityPanel({
       setAmtB("");
       onSuccess(desc, receipt.hash);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed";
-      onNotify(msg.length > 80 ? msg.slice(0, 80) + "..." : msg, "error");
+      let msg = "Failed to add liquidity";
+      if (e instanceof Error) {
+        if (e.message.includes("user rejected")) {
+          msg = "Transaction rejected by user";
+        } else if (e.message.includes("insufficient funds")) {
+          msg = "Insufficient funds for gas";
+        } else if (e.message.includes("Insufficient")) {
+          msg = e.message;
+        } else {
+          msg = e.message.length > 80 ? e.message.slice(0, 80) + "..." : e.message;
+        }
+      }
+      onNotify(msg, "error");
     } finally {
       setLoading(false);
     }
-  }, [swapContract, tokenAContract, tokenBContract, amtA, amtB, numA, numB, symbolA, symbolB, onNotify, onSuccess]);
+  }, [swapContract, tokenAContract, tokenBContract, amtA, amtB, numA, numB, symbolA, symbolB, user.balanceA, user.balanceB, onNotify, onSuccess]);
 
   return (
     <div className="space-y-4">

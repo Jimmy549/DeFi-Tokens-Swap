@@ -61,12 +61,23 @@ export function SwapPanel({
 
     setLoading(true);
     try {
+      if (numAmountIn > balIn) {
+        throw new Error("Insufficient balance");
+      }
+      if (numAmountIn <= 0) {
+        throw new Error("Amount must be greater than 0");
+      }
+      if (priceImpact > 15) {
+        throw new Error("Price impact too high (>15%)");
+      }
+
       const amtInWei = toWei(amountIn);
       const minOutStr = minOut.toFixed(18);
       const minOutWei = toWei(minOutStr);
       
       const swapAddr = swapContract.target;
       onNotify(`Approving ${isAtoB ? symbolA : symbolB}...`, "info");
+      
       const approveTx = await token.approve(swapAddr, amtInWei);
       await approveTx.wait();
 
@@ -82,12 +93,25 @@ export function SwapPanel({
       setAmountIn("");
       onSuccess(desc, receipt.hash);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Swap failed";
-      onNotify(msg.length > 80 ? msg.slice(0, 80) + "..." : msg, "error");
+      let msg = "Swap failed";
+      if (e instanceof Error) {
+        if (e.message.includes("user rejected")) {
+          msg = "Transaction rejected by user";
+        } else if (e.message.includes("insufficient funds")) {
+          msg = "Insufficient funds for gas";
+        } else if (e.message.includes("Insufficient balance")) {
+          msg = e.message;
+        } else if (e.message.includes("Price impact")) {
+          msg = e.message;
+        } else {
+          msg = e.message.length > 80 ? e.message.slice(0, 80) + "..." : e.message;
+        }
+      }
+      onNotify(msg, "error");
     } finally {
       setLoading(false);
     }
-  }, [swapContract, tokenAContract, tokenBContract, isAtoB, numAmountIn, minOut, amountOut, symbolA, symbolB, onNotify, onSuccess]);
+  }, [swapContract, tokenAContract, tokenBContract, isAtoB, numAmountIn, minOut, amountOut, symbolA, symbolB, balIn, priceImpact, onNotify, onSuccess]);
 
   return (
     <div className="space-y-4">

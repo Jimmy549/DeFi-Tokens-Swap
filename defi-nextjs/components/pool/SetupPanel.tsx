@@ -60,15 +60,29 @@ export function SetupPanel({
 
   const handleLoad = async () => {
     if (!allValid) return;
+    if (!connected) {
+      setStatus({ msg: "Please connect wallet first", ok: false });
+      return;
+    }
     setLoading(true);
     setStatus(null);
     try {
       await onLoad(addrs);
       localStorage.setItem("defi_last_addrs", JSON.stringify(addrs));
       setStatus({ msg: "✓ Contracts loaded successfully", ok: true });
+      setTimeout(() => setStatus(null), 3000);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed to load contracts";
-      setStatus({ msg: msg.slice(0, 100), ok: false });
+      let msg = "Failed to load contracts";
+      if (e instanceof Error) {
+        if (e.message.includes("Invalid")) {
+          msg = e.message;
+        } else if (e.message.includes("network")) {
+          msg = "Network error. Check your connection";
+        } else {
+          msg = e.message.slice(0, 100);
+        }
+      }
+      setStatus({ msg, ok: false });
     } finally {
       setLoading(false);
     }
