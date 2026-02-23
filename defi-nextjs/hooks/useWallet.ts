@@ -1,0 +1,152 @@
+"use client";
+
+import { useState, useCallback, useEffect } from "react";
+import { ethers } from "ethers";
+import { SUPPORTED_NETWORKS } from "@/lib/constants";
+import { fmtAddress } from "@/lib/utils";
+
+interface WalletState {
+  provider: ethers.BrowserProvider | null;
+  signer: ethers.Signer | null;
+  address: string;
+  network: string;
+  chainId: number;
+  blockNumber: number;
+  connected: boolean;
+}
+
+export function useWallet() {
+  const [wallet, setWallet] = useState<WalletState>({
+    provider: null,
+    signer: null,
+    address: "",
+    network: "",
+    chainId: 0,
+    blockNumber: 0,
+    connected: false,
+  });
+  const [connecting, setConnecting] = useState(false);
+  const [error, setError] = useState("");
+
+  const connect = useCallback(async (isAuto = false) => {
+    if (typeof window === "undefined" || !window.ethereum) {
+      if (!isAuto) setError("MetaMask not found. Please install MetaMask.");
+      return false;
+    }
+    
+    if (!isAuto) setConnecting(true);
+    setError("");
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      
+      // If auto-connecting, check if we already have permission
+      if (isAuto) {
+        const accounts = await provider.listAccounts();
+        if (accounts.length === 0) return false;
+      } else {
+        await provider.send("eth_requestAccounts", []);
+      }
+
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+      const network = await provider.getNetwork();
+      const blockNumber = await provider.getBlockNumber();
+
+      setWallet({
+        provider,
+        signer,
+        address,
+        network: SUPPORTED_NETWORKS[Number(network.chainId)] ?? `Chain ${network.chainId}`,
+        chainId: Number(network.chainId),
+        blockNumber,
+        connected: true,
+      });
+
+      localStorage.setItem("defi_wallet_connected", "true");
+      return true;
+    } catch (e: unknown) {
+      if (!isAuto) {
+        const msg = e instanceof Error ? e.message : "Connection failed";
+        setError(msg);
+      }
+      return false;
+    } finally {
+      setConnecting(false);
+    }
+  }, []);
+
+  const disconnect = useCallback(() => {
+    if (wallet.provider) {
+      wallet.provider.removeAllListeners();
+    }
+    setWallet({
+      provider: null,
+      signer: null,
+      address: "",
+      network: "",
+      chainId: 0,
+      blockNumber: 0,
+      connected: false,
+    });
+    localStorage.removeItem("defi_wallet_connected");
+  }, [wallet.provider]);
+
+  // Auto-connect on mount
+  useEffect(() => {
+    const wasConnected = localStorage.getItem("defi_wallet_connected") === "true";
+    if (wasConnected) {
+      connect(true);
+    }
+  }, [connect]);
+
+  // Block listener cleanup and setup
+  useEffect(() => {
+    if (!wallet.provider || !wallet.connected) return;
+
+    const provider = wallet.provider;
+    const handleBlock = (bn: number) => {
+      setWallet((prev) => ({ ...prev, blockNumber: bn }));
+    };
+
+    provider.on("block", handleBlock);
+    
+    return () => {
+      provider.off("block", handleBlock);
+    };
+  }, [wallet.provider, wallet.connected]);
+
+  // Handle account/network changes
+  useEffect(() => {
+    const ethereum = typeof window !== "undefined" ? (window as any).ethereum : null;
+    if (!ethereum) return;
+
+    const handleAccountsChanged = (accounts: any) => {
+      const accts = accounts as string[];
+      if (accts.length === 0) {
+        disconnect();
+      } else {
+        connect(true); 
+      }
+    };
+    const handleChainChanged = () => {
+      window.location.reload();
+    };
+
+    ethereum.on("accountsChanged", handleAccountsChanged);
+    ethereum.on("chainChanged", handleChainChanged);
+    
+    return () => {
+      ethereum.removeListener("accountsChanged", handleAccountsChanged);
+      ethereum.removeListener("chainChanged", handleChainChanged);
+    };
+  }, [disconnect, connect]);
+
+  return {
+    wallet,
+    connecting,
+    error,
+    connect,
+    disconnect,
+    shortAddress: fmtAddress(wallet.address),
+  };
+}
