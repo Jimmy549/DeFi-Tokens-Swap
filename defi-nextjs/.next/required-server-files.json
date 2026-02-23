@@ -2,7 +2,6 @@
   "version": 1,
   "config": {
     "env": {},
-    "webpack": null,
     "eslint": {
       "ignoreDuringBuilds": false
     },
@@ -82,7 +81,7 @@
     "serverRuntimeConfig": {},
     "publicRuntimeConfig": {},
     "reactProductionProfiling": false,
-    "reactStrictMode": true,
+    "reactStrictMode": false,
     "reactMaxHeadersLength": 6000,
     "httpAgentOptions": {
       "keepAlive": true

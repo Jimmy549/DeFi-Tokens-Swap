@@ -79,9 +79,6 @@ export function useWallet() {
   }, []);
 
   const disconnect = useCallback(() => {
-    if (wallet.provider) {
-      wallet.provider.removeAllListeners();
-    }
     setWallet({
       provider: null,
       signer: null,
@@ -92,15 +89,18 @@ export function useWallet() {
       connected: false,
     });
     localStorage.removeItem("defi_wallet_connected");
-  }, [wallet.provider]);
+  }, []);
 
   // Auto-connect on mount
   useEffect(() => {
     const wasConnected = localStorage.getItem("defi_wallet_connected") === "true";
-    if (wasConnected) {
-      connect(true);
+    if (wasConnected && typeof window !== "undefined") {
+      const timer = setTimeout(() => {
+        connect(true);
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [connect]);
+  }, []);
 
   // Block listener cleanup and setup
   useEffect(() => {
