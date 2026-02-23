@@ -28,6 +28,19 @@ export function useWallet() {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState("");
 
+  const disconnect = useCallback(() => {
+    setWallet({
+      provider: null,
+      signer: null,
+      address: "",
+      network: "",
+      chainId: 0,
+      blockNumber: 0,
+      connected: false,
+    });
+    localStorage.removeItem("defi_wallet_connected");
+  }, []);
+
   const connect = useCallback(async (isAuto = false) => {
     try {
       if (typeof window === "undefined") return false;
@@ -87,29 +100,31 @@ export function useWallet() {
     }
   }, []);
 
-  const disconnect = useCallback(() => {
-    setWallet({
-      provider: null,
-      signer: null,
-      address: "",
-      network: "",
-      chainId: 0,
-      blockNumber: 0,
-      connected: false,
-    });
-    localStorage.removeItem("defi_wallet_connected");
-  }, []);
-
   // Auto-connect on mount
   useEffect(() => {
+    let mounted = true;
     const wasConnected = localStorage.getItem("defi_wallet_connected") === "true";
-    if (wasConnected && typeof window !== "undefined") {
-      const timer = setTimeout(() => {
-        connect(true);
-      }, 100);
-      return () => clearTimeout(timer);
+    
+    if (wasConnected && typeof window !== "undefined" && window.ethereum) {
+      const timer = setTimeout(async () => {
+        if (mounted) {
+          try {
+            const provider = new ethers.BrowserProvider(window.ethereum!);
+            const accounts = await provider.listAccounts();
+            if (accounts.length > 0 && mounted) {
+              await connect(true);
+            }
+          } catch (e) {
+            console.error("Auto-connect failed:", e);
+          }
+        }
+      }, 500);
+      return () => {
+        mounted = false;
+        clearTimeout(timer);
+      };
     }
-  }, []);
+  }, [connect]);
 
   // Block listener cleanup and setup
   useEffect(() => {
@@ -139,7 +154,7 @@ export function useWallet() {
       if (accounts.length === 0) {
         disconnect();
       } else {
-        connect(true); 
+        window.location.reload();
       }
     };
     const handleChainChanged = () => {
@@ -153,7 +168,7 @@ export function useWallet() {
       ethereum.removeListener("accountsChanged", handleAccountsChanged);
       ethereum.removeListener("chainChanged", handleChainChanged);
     };
-  }, [disconnect, connect]);
+  }, [disconnect]);
 
   return {
     wallet,
