@@ -1,4 +1,4 @@
-// File: D:\Netixsol Intern-Projects\Week-12\Day3-4\defi-nextjs\app\page.tsx
+// File: d:\Netixsol Intern-Projects\Week-12\Day3-4\defi-nextjs\app\page.tsx
 import * as entry from '../../../app/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

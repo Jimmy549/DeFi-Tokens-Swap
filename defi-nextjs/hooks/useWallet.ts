@@ -125,7 +125,8 @@ export function useWallet() {
     const ethereum = window.ethereum;
     if (!ethereum) return;
 
-    const handleAccountsChanged = (accounts: string[]) => {
+    const handleAccountsChanged = (...args: unknown[]) => {
+      const accounts = args[0] as string[];
       if (accounts.length === 0) {
         disconnect();
       } else {
