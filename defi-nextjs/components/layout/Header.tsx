@@ -10,7 +10,7 @@ interface HeaderProps {
   network: string;
   blockNumber: number;
   connecting: boolean;
-  onConnect: () => void;
+  onConnect: () => Promise<void>;
   onDisconnect: () => void;
 }
 

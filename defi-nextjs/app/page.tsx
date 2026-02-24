@@ -14,7 +14,7 @@ import { NotificationStack } from "@/components/ui/Notification";
 import type { ContractAddresses, SavedPair } from "@/types";
 
 export default function Home() {
-  const { wallet, connecting, connect, disconnect, shortAddress } = useWallet();
+  const { wallet, connecting, connect, disconnect, shortAddress, error } = useWallet();
   const { contracts, pool, userInfo, loadContracts, refreshPool } = useContracts(wallet.signer);
   const { notifications, notify, dismiss } = useNotifications();
 
@@ -23,6 +23,13 @@ export default function Home() {
 
   const contractsRef = useRef(contracts);
   contractsRef.current = contracts;
+
+  const handleConnect = useCallback(async () => {
+    const success = await connect();
+    if (!success && error) {
+      notify(error, "error");
+    }
+  }, [connect, error, notify]);
 
   // Load saved pairs from localStorage
   useEffect(() => {
@@ -115,7 +122,7 @@ export default function Home() {
         network={wallet.network}
         blockNumber={wallet.blockNumber}
         connecting={connecting}
-        onConnect={connect}
+        onConnect={handleConnect}
         onDisconnect={disconnect}
       />
 
