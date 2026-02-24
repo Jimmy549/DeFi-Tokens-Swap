@@ -34,7 +34,7 @@ export function SwapPanel({
   onNotify,
 }: SwapPanelProps) {
   const [amountIn, setAmountIn] = useState("");
-  const [isAtoB, setIsAtoB] = useState(true);
+  const [isAtoB, setIsAtoB] = useState(false);
   const [slippage, setSlippage] = useState(0.5);
   const [loading, setLoading] = useState(false);
 
